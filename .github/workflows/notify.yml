@@ -28,5 +28,5 @@ jobs:
 
       - name: Run crawler
         env:
-          TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+          FLOW_URL: ${{ secrets.FLOW_URL }}   # ✅ 여기서 Flow URL을 Python에 넘김
         run: python "food crawl.py"
