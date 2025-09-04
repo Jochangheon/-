@@ -1,11 +1,40 @@
 import requests
+from bs4 import BeautifulSoup
 import json
+import os
 
-webhook_url = "https://defaultd4398d3154f8451088beffc628e4e5.14.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/bf62fe1628454ec48672433674bdca5c/triggers/manual/paths/invoke/?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=r6gY2Z7mrH27PNiWDh09CrUC2rw04DOC1T9GI-3E-EE"
-payload = {
-    "title": "🔔 알림봇 테스트",
-    "message": "이 메시지는 Power Automate Workflows를 통해 전송되었습니다."
-}
+def main():
+    # ① 크롤링 (예시: Hacker News에서 첫 번째 헤드라인 가져오기)
+    try:
+        html = requests.get("https://news.ycombinator.com/").text
+        soup = BeautifulSoup(html, "html.parser")
+        headline = soup.select_one(".titleline a").get_text()
+    except Exception as e:
+        headline = f"크롤링 실패: {e}"
 
-resp = requests.post(webhook_url, headers={"Content-Type": "application/json"}, data=json.dumps(payload))
-print(resp.status_code, resp.text)
+    # ② GitHub Secrets에서 Webhook URL 불러오기
+    webhook_url = os.environ.get("TEAMS_WEBHOOK_URL")
+    if not webhook_url:
+        print("❌ TEAMS_WEBHOOK_URL 환경변수가 없습니다.")
+        return
+
+    # ③ 메시지 구성
+    payload = {
+        "title": "🔔 자동 뉴스 알림",
+        "message": headline
+    }
+
+    # ④ Teams Webhook POST
+    try:
+        resp = requests.post(
+            webhook_url,
+            headers={"Content-Type": "application/json"},
+            data=json.dumps(payload)
+        )
+        print("전송 상태:", resp.status_code, resp.text)
+    except Exception as e:
+        print("❌ 전송 중 오류:", e)
+
+
+if __name__ == "__main__":
+    main()
