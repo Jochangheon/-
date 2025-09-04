@@ -3,7 +3,7 @@ name: Teams Notify Bot
 on:
   workflow_dispatch:
   schedule:
-    - cron: "45 3 * * *"   # 한국시간 12:35 실행
+    - cron: "35 3 * * *"   # 한국시간 12:35 실행
 
 jobs:
   run-crawler:
@@ -20,6 +20,11 @@ jobs:
       - name: Install dependencies
         run: |
           pip install requests beautifulsoup4 selenium
+
+      - name: Install Chrome & Chromedriver
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium-browser chromium-chromedriver
 
       - name: Run crawler
         env:
