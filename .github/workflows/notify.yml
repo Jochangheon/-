@@ -1,9 +1,9 @@
 name: Teams Notify Bot
 
 on:
+  workflow_dispatch:
   schedule:
-    - cron: "35 3 * * *"   # 매일 00:00 UTC (한국 시간 오전 9시)
-  workflow_dispatch:       # 수동 실행 버튼도 제공
+    - cron: "45 3 * * *"   # 한국시간 12:35 실행
 
 jobs:
   run-crawler:
@@ -18,7 +18,8 @@ jobs:
           python-version: '3.10'
 
       - name: Install dependencies
-        run: pip install requests beautifulsoup4
+        run: |
+          pip install requests beautifulsoup4 selenium
 
       - name: Run crawler
         env:
