@@ -1,0 +1,26 @@
+name: Teams Notify Bot
+
+on:
+  schedule:
+    - cron: "22 3 * * *"   # 매일 00:00 UTC (한국 시간 오전 9시)
+  workflow_dispatch:       # 수동 실행 버튼도 제공
+
+jobs:
+  run-crawler:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4
+
+      - name: Run crawler
+        env:
+          TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+        run: python crawler.py
