@@ -4,13 +4,22 @@ import json
 import os
 
 def main():
-    # ① 크롤링 (예시: Hacker News에서 첫 번째 헤드라인 가져오기)
+    # ① 크롤링 (예: 네이버 플레이스 소식탭 이미지)
     try:
-        html = requests.get("https://news.ycombinator.com/").text
+        url = "https://map.naver.com/p/entry/place/1578060862"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        html = requests.get(url, headers=headers).text
         soup = BeautifulSoup(html, "html.parser")
-        headline = soup.select_one(".titleline a").get_text()
+
+        # <img> 태그 중 네이버 place 이미지 서버(ldb-phinf) 필터링
+        img_tag = soup.find("img", src=lambda x: x and "ldb-phinf.pstatic.net" in x)
+        if img_tag:
+            image_url = img_tag["src"]
+        else:
+            image_url = None
     except Exception as e:
-        headline = f"크롤링 실패: {e}"
+        image_url = None
+        print("크롤링 실패:", e)
 
     # ② GitHub Secrets에서 Webhook URL 불러오기
     webhook_url = os.environ.get("TEAMS_WEBHOOK_URL")
@@ -18,23 +27,32 @@ def main():
         print("❌ TEAMS_WEBHOOK_URL 환경변수가 없습니다.")
         return
 
-    # ③ 메시지 구성
-    payload = {
-        "title": "🔔 자동 뉴스 알림",
-        "message": headline
-    }
+    # ③ Adaptive Card 메시지 구성
+    if image_url:
+        payload = {
+            "type": "message",
+            "attachments": [
+                {
+                    "contentType": "application/vnd.microsoft.card.adaptive",
+                    "content": {
+                        "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                        "type": "AdaptiveCard",
+                        "version": "1.4",
+                        "body": [
+                            {"type": "TextBlock", "text": "오늘의 소식 사진", "weight": "Bolder", "size": "Medium"},
+                            {"type": "Image", "url": image_url, "size": "Stretch"}
+                        ]
+                    }
+                }
+            ]
+        }
+    else:
+        payload = {
+            "text": "❌ 이미지를 가져오지 못했습니다."
+        }
 
     # ④ Teams Webhook POST
     try:
         resp = requests.post(
             webhook_url,
-            headers={"Content-Type": "application/json"},
-            data=json.dumps(payload)
-        )
-        print("전송 상태:", resp.status_code, resp.text)
-    except Exception as e:
-        print("❌ 전송 중 오류:", e)
-
-
-if __name__ == "__main__":
-    main()
+            heade
