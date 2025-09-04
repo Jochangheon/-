@@ -2,7 +2,7 @@ name: Teams Notify Bot
 
 on:
   schedule:
-    - cron: "22 3 * * *"   # 매일 00:00 UTC (한국 시간 오전 9시)
+    - cron: "35 3 * * *"   # 매일 00:00 UTC (한국 시간 오전 9시)
   workflow_dispatch:       # 수동 실행 버튼도 제공
 
 jobs:
