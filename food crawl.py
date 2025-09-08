@@ -6,6 +6,8 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 from PIL import Image, ImageEnhance, ImageFilter
 import pytesseract
 
@@ -22,7 +24,7 @@ def main():
 
     # Chrome WebDriver 옵션
     options = webdriver.ChromeOptions()
-    options.binary_location = "/usr/bin/google-chrome"   # ✅ GitHub Actions용 크롬 경로 지정
+    options.binary_location = "/usr/bin/google-chrome"   # GitHub Actions용 크롬 경로
     options.add_argument("--headless=new")
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920x1080")
@@ -32,7 +34,7 @@ def main():
 
     driver = None
     try:
-        driver = webdriver.Chrome(options=options)
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
         print("🌐 네이버 플레이스 페이지 접속...")
         driver.get(naver_url)
 
