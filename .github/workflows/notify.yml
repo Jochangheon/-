@@ -30,4 +30,4 @@ jobs:
       - name: Run OCR crawler
         env:
           FLOW_URL: ${{ secrets.FLOW_URL }}   # ✅ GitHub Secret에서 FLOW_URL 가져옴
-        run: python "food.py"
+        run: python "food crawl.py"
