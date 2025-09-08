@@ -10,6 +10,7 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from PIL import Image, ImageEnhance, ImageFilter
 import pytesseract
+import re
 
 
 def main():
@@ -24,7 +25,7 @@ def main():
 
     # Chrome WebDriver 옵션
     options = webdriver.ChromeOptions()
-    options.binary_location = "/usr/bin/google-chrome"   # GitHub Actions용 크롬 경로
+    options.binary_location = "/usr/bin/google-chrome"   # GitHub Actions 환경 크롬 경로
     options.add_argument("--headless=new")
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920x1080")
@@ -61,19 +62,24 @@ def main():
         response = requests.get(image_url, timeout=10)
         img = Image.open(BytesIO(response.content))
 
-        # OCR 전처리
-        img = img.convert("L")
-        img = ImageEnhance.Contrast(img).enhance(2.0)
-        img = img.filter(ImageFilter.SHARPEN)
+        # OCR 전처리 (흑백 변환 + 대비 강화 + 이진화)
+        img = img.convert("L")  # 흑백
+        img = ImageEnhance.Contrast(img).enhance(3.0)  # 대비 강화
+        img = img.point(lambda x: 0 if x < 160 else 255, '1')  # 이진화
 
         print("🔍 OCR 분석 시작...")
-        menu_text = pytesseract.image_to_string(img, lang="kor+eng")
+        # 한글 전용 OCR
+        menu_text = pytesseract.image_to_string(img, lang="kor")
 
-        if not menu_text.strip():
+        # 줄 단위 정리 + 한글/숫자/특정 기호만 남김
+        menu_lines = [line.strip() for line in menu_text.split("\n") if line.strip()]
+        menu_lines = [re.sub(r"[^가-힣0-9\s\.\,\(\)]", "", line) for line in menu_lines if line.strip()]
+        menu_lines = [line for line in menu_lines if line]  # 공백 줄 제거
+
+        if not menu_lines:
             message = "오늘은 메뉴 이미지를 분석할 수 없습니다. 직접 확인해 주세요."
             print("❌ OCR 결과 없음")
         else:
-            menu_lines = [line.strip() for line in menu_text.split("\n") if line.strip()]
             menu_message = "\n".join(menu_lines)
             message = f"오늘의 메뉴는 다음과 같습니다:\n{menu_message}"
 
@@ -82,11 +88,10 @@ def main():
                 print(f"{idx}. {line}")
             print("=========================\n")
 
-        # Payload 구성
+        # Payload 구성 (OCR 메뉴만 전송)
         payload = {
             "title": "🍽️ 오늘의 메뉴",
-            "message": message,
-            "image_url": image_url,
+            "message": message
         }
 
         # Payload 디버깅 출력
