@@ -1,25 +1,33 @@
-(Reading database ... 219960 files and directories currently installed.)
-Preparing to unpack .../google-chrome-stable_current_amd64.deb ...
-Unpacking google-chrome-stable (140.0.7339.80-1) over (139.0.7258.154-1) ...
-Setting up google-chrome-stable (140.0.7339.80-1) ...
-Processing triggers for man-db (2.12.0-4build2) ...
+name: Food Crawl Bot   # ✅ Actions 탭에 보이는 이름
 
-Running kernel seems to be up-to-date.
+on:
+  workflow_dispatch:   # 수동 실행
+  schedule:
+    - cron: "35 3 * * *"   # 한국시간 12:35 (UTC 03:35)
 
-Restarting services...
+jobs:
+  run-crawl:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-Service restarts being deferred:
- systemctl restart hosted-compute-agent.service
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
-No containers need to be restarted.
+      - name: Install Python dependencies
+        run: |
+          pip install requests pillow pytesseract selenium webdriver-manager
 
-No user sessions are running outdated binaries.
+      - name: Install system packages (Tesseract & Chrome)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tesseract-ocr libtesseract-dev tesseract-ocr-kor \
+            google-chrome-stable
 
-No VM guests are running outdated hypervisor (qemu) binaries on this host.
---2025-09-08 23:36:01--  https://chromedriver.storage.googleapis.com/%3C?xml%20version='1.0'%20encoding='UTF-8'?%3E%3CError%3E%3CCode%3ENoSuchKey%3C/Code%3E%3CMessage%3EThe%20specified%20key%20does%20not%20exist.%3C/Message%3E%3CDetails%3ENo%20such%20object:%20chromedriver/LATEST_RELEASE_140%3C/Details%3E%3C/Error%3E/chromedriver_linux64.zip
-Resolving chromedriver.storage.googleapis.com (chromedriver.storage.googleapis.com)... 74.125.126.207, 74.125.132.207, 142.250.125.207, ...
-Connecting to chromedriver.storage.googleapis.com (chromedriver.storage.googleapis.com)|74.125.126.207|:443... connected.
-HTTP request sent, awaiting response... 404 Not Found
-2025-09-08 23:36:01 ERROR 404: Not Found.
-
-Error: Process completed with exit code 8.
+      - name: Run food crawl.py
+        env:
+          FLOW_URL: ${{ secrets.FLOW_URL }}   # ✅ GitHub Secrets에 등록한 Flow API Endpoint
+        run: python "food crawl.py"
