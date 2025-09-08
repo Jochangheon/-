@@ -9,16 +9,20 @@ from selenium.webdriver.support import expected_conditions as EC
 from PIL import Image, ImageEnhance, ImageFilter
 import pytesseract
 
+
 def main():
-    # FLOW_URL은 GitHub Actions Secrets에서 받아와야 함
+    # FLOW_URL 은 GitHub Secrets에서 받아옴
     flow_url = os.environ.get("FLOW_URL")
     if not flow_url:
         print("❌ FLOW_URL 환경변수가 없습니다. GitHub Secrets 설정을 확인하세요.")
         return
 
+    # 네이버 플레이스 URL
     naver_url = "https://map.naver.com/p/search/%EB%B0%A5%EC%A7%93%EB%8A%94%20%EB%B6%80%EC%97%8C/place/1578060862"
 
+    # Chrome WebDriver 옵션
     options = webdriver.ChromeOptions()
+    options.binary_location = "/usr/bin/google-chrome"   # ✅ GitHub Actions용 크롬 경로 지정
     options.add_argument("--headless=new")
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920x1080")
@@ -39,7 +43,8 @@ def main():
         wait.until(EC.frame_to_be_available_and_switch_to_it((By.ID, "entryIframe")))
         print("✅ entryIframe 전환 성공")
 
-        # 메뉴 이미지 탐색
+        # 메뉴 이미지 탐색 (소식의 첫 번째 이미지)
+        print("🔍 메뉴 이미지 탐색...")
         img_element = wait.until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "div.place_section img"))
         )
@@ -64,18 +69,25 @@ def main():
 
         if not menu_text.strip():
             message = "오늘은 메뉴 이미지를 분석할 수 없습니다. 직접 확인해 주세요."
+            print("❌ OCR 결과 없음")
         else:
             menu_lines = [line.strip() for line in menu_text.split("\n") if line.strip()]
             menu_message = "\n".join(menu_lines)
             message = f"오늘의 메뉴는 다음과 같습니다:\n{menu_message}"
 
-        # Payload
+            print("\n===== OCR 추출 결과 =====")
+            for idx, line in enumerate(menu_lines, 1):
+                print(f"{idx}. {line}")
+            print("=========================\n")
+
+        # Payload 구성
         payload = {
             "title": "🍽️ 오늘의 메뉴",
             "message": message,
             "image_url": image_url,
         }
 
+        # Payload 디버깅 출력
         print("===== 전송할 Payload =====")
         print(json.dumps(payload, indent=2, ensure_ascii=False))
         print("=========================\n")
@@ -95,6 +107,7 @@ def main():
     finally:
         if driver:
             driver.quit()
+
 
 if __name__ == "__main__":
     main()
