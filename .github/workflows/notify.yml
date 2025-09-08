@@ -1,12 +1,12 @@
-name: Teams Notify Bot
+name: Food OCR Bot
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "35 3 * * *"   # 한국시간 12:35 실행
+    - cron: "35 3 * * *"   # 한국시간 12:35 실행 (UTC+0 기준 03:35)
 
 jobs:
-  run-crawler:
+  run-ocr:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
@@ -15,18 +15,19 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: |
-          pip install requests beautifulsoup4 selenium
+          pip install requests pillow pytesseract selenium
 
       - name: Install Chrome & Chromedriver
         run: |
           sudo apt-get update
           sudo apt-get install -y chromium-browser chromium-chromedriver
+          sudo apt-get install -y tesseract-ocr libtesseract-dev tesseract-ocr-kor
 
-      - name: Run crawler
+      - name: Run OCR crawler
         env:
-          FLOW_URL: ${{ secrets.FLOW_URL }}   # ✅ 여기서 Flow URL을 Python에 넘김
-        run: python "food crawl.py"
+          FLOW_URL: ${{ secrets.FLOW_URL }}   # ✅ GitHub Secret에서 FLOW_URL 가져옴
+        run: python "food.py"
