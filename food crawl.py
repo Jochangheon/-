@@ -68,7 +68,7 @@ def main():
         # === Hugging Face REST API 호출 ===
         print("🤖 Hugging Face API 호출 중...")
         model = "google/flan-t5-base"  # 우선 안정적인 텍스트 모델로 테스트
-        api_url = f"https://api-inference.huggingface.co/models/{model}"
+        api_url = f"https://api-inference.huggingface.co/models/beomi/KoAlpaca-Polyglot-12.8B"
         headers = {"Authorization": f"Bearer {hf_token}"}
         payload = {
             "inputs": f"다음은 음식점 메뉴 이미지 URL입니다: {image_url}\n"
