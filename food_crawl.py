@@ -57,7 +57,7 @@ def main():
         img.save(img_path)
 
         # Hugging Face REST API 호출 (지원 모델 사용)
-        model = "google/flan-t5-small"  # 모델 이름 확인 필요
+        model = "deepseek-ai/DeepSeek-R1"  # 모델 이름 확인 필요
         api_url = f"https://api-inference.huggingface.co/models/{model}"
         headers = {"Authorization": f"Bearer {hf_token}"}
         payload = {
