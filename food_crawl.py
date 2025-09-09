@@ -37,7 +37,7 @@ def main():
         print("🌐 네이버 플레이스 페이지 접속...")
         driver.get(naver_url)
 
-        wait = WebDriverWait(driver, 30)  # 타임아웃을 명시적으로 설정합니다 (기존 15에서 30으로 변경)
+        wait = WebDriverWait(driver, 30)
         print("🔄 entryIframe 전환...")
         wait.until(EC.frame_to_be_available_and_switch_to_it((By.ID, "entryIframe")))
         print("✅ entryIframe 전환 성공")
@@ -56,38 +56,66 @@ def main():
         img_path = "/tmp/menu.jpg"
         img.save(img_path)
 
-        # Hugging Face REST API 호출 (지원 모델 사용)
-        model = "deepseek-ai/DeepSeek-R1"  # 모델 이름 확인 필요
-        api_url = f"https://api-inference.huggingface.co/models/{model}"
-        headers = {"Authorization": f"Bearer {hf_token}"}
-        payload = {
-            "inputs": f"다음은 음식점 메뉴 이미지 URL입니다: {image_url}\n"
-                      f"이 메뉴판의 음식 이름만 JSON 배열로 정리해줘. 예시: [\"김치찌개\", \"된장찌개\", \"비빔밥\"]"
-        }
+        # 확실히 작동하는 모델들 목록 (우선순위 순)
+        working_models = [
+            "facebook/bart-large-cnn",  # 검증된 작동 모델
+            "microsoft/DialoGPT-medium",
+            "gpt2"  # 백업 옵션
+        ]
 
-        max_attempts = 3  # 최대 시도를 줄이거나 늘림으로써 무한 대기를 방지합니다
+        for model in working_models:
+            print(f"🤖 {model} 모델 시도 중...")
+            api_url = f"https://api-inference.huggingface.co/models/{model}"
+            headers = {
+                "Authorization": f"Bearer {hf_token}",
+                "Content-Type": "application/json"
+            }
+            
+            # 모델별 적절한 payload 설정
+            if "bart" in model.lower():
+                payload = {
+                    "inputs": f"이 음식점 메뉴 이미지에서 음식 이름들을 추출해주세요: {image_url}. 한국 음식 메뉴를 JSON 형태로 정리해주세요.",
+                    "parameters": {
+                        "max_length": 200,
+                        "min_length": 30
+                    }
+                }
+            else:
+                payload = {
+                    "inputs": f"메뉴판 이미지 분석: {image_url}. 음식 이름 목록:"
+                }
 
-        for attempt in range(max_attempts):
-            try:
-                print("🤖 Hugging Face API 호출 중... (시도 {}/{})".format(attempt + 1, max_attempts))
-                resp = requests.post(api_url, headers=headers, json=payload, timeout=30)
-                print("🔎 HF 응답 상태:", resp.status_code)
+            success = False
+            for attempt in range(3):
+                try:
+                    print(f"   시도 {attempt + 1}/3...")
+                    resp = requests.post(api_url, headers=headers, json=payload, timeout=30)
+                    print(f"   응답 상태: {resp.status_code}")
 
-                resp.raise_for_status()
-                
-                result = resp.json()
-                print("HF 응답 원본:", json.dumps(result, ensure_ascii=False, indent=2))
+                    if resp.status_code == 200:
+                        result = resp.json()
+                        print("✅ API 호출 성공!")
+                        print("응답:", json.dumps(result, ensure_ascii=False, indent=2))
+                        success = True
+                        break
+                    elif resp.status_code == 404:
+                        print(f"   ❌ {model} 모델 사용 불가 (404)")
+                        break
+                    elif resp.status_code == 503:
+                        print("   ⏳ 모델 로딩 중, 재시도...")
+                        time.sleep(10)
+                    else:
+                        print(f"   ⚠️ 상태 코드: {resp.status_code}, 응답: {resp.text}")
+                        time.sleep(2)
+                        
+                except requests.exceptions.RequestException as e:
+                    print(f"   ❌ 요청 오류: {e}")
+                    time.sleep(2)
+            
+            if success:
                 break
-            except requests.exceptions.HTTPError as e:
-                print("❌ 요청 실패: HTTP Error", e)
-                print("응답 내용:", resp.text)
-            except requests.exceptions.ReadTimeout:
-                print("⏳ 타임아웃 발생, 재시도 대기 중...")
-                time.sleep(2 ** attempt)
-            except requests.exceptions.RequestException as e:
-                print(f"❌ 요청 실패: {e}")
-                print("응답 내용:", e.response.text if e.response else 'No response')
-                break
+        else:
+            print("❌ 모든 모델 시도 실패")
         
     except Exception as e:
         print("❌ 오류 발생:", repr(e))
