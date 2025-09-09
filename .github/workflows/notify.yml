@@ -30,4 +30,4 @@ jobs:
         env:
           FLOW_URL: ${{ secrets.FLOW_URL }}
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: python food crawl.py
+        run: python food_crawl.py
