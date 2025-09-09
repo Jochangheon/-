@@ -63,37 +63,30 @@ def main():
             return
         print(f"✅ 이미지 URL: {image_url}")
 
-        # 이미지 다운로드
+        # 이미지 다운로드 (검증용)
         response = requests.get(image_url, timeout=10)
         img = Image.open(BytesIO(response.content))
         img_path = "/tmp/menu.jpg"
         img.save(img_path)
 
-        # Hugging Face 멀티모달 모델 호출 (예: Qwen-VL)
+        # Hugging Face AI 호출
         print("🤖 Hugging Face AI 호출 중...")
         client = InferenceClient(model="Qwen/Qwen-VL", token=hf_token)
 
-        with open(img_path, "rb") as f:
-            prompt = "이 이미지 속에서 음식 메뉴 이름만 뽑아서 JSON 배열로 출력해줘. 예시: [\"김치찌개\",\"된장찌개\",\"비빔밥\"]"
-            response = client.post(
-                json={
-                    "inputs": {
-                        "prompt": prompt,
-                        "image": f.read()
-                    }
-                }
-            )
+        prompt = f"""
+        아래 이미지에 나온 음식 메뉴 이름만 뽑아서 JSON 배열로 출력해줘.
+        예시: ["김치찌개","된장찌개","비빔밥"]
+
+        이미지 URL: {image_url}
+        """
+
+        response = client.text_generation(prompt, max_new_tokens=512)
 
         # 응답 처리
-        if isinstance(response, dict):
-            text = response.get("generated_text", "")
-        else:
-            text = str(response)
-
         try:
-            menus = json.loads(text.strip())
+            menus = json.loads(response.strip())
         except Exception:
-            menus = [line.strip() for line in text.split("\n") if line.strip()]
+            menus = [line.strip() for line in response.split("\n") if line.strip()]
 
         print("\n===== AI 추출 결과 =====")
         for idx, menu in enumerate(menus, 1):
