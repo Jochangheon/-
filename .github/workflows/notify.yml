@@ -3,7 +3,7 @@ name: Food Crawl AI Bot
 on:
   workflow_dispatch:
   schedule:
-    - cron: "35 3 * * *"   # 한국시간 12:35 실행 (UTC 기준 03:35)
+    - cron: "35 3 * * *"   # 한국시간 12:35 실행
 
 jobs:
   run-crawl:
@@ -19,15 +19,15 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install requests pillow selenium webdriver-manager huggingface_hub
+          pip install requests pillow selenium webdriver-manager
 
       - name: Install system packages (Chrome)
         run: |
           sudo apt-get update
           sudo apt-get install -y google-chrome-stable
 
-      - name: Run food crawl.py
+      - name: Run food_crawl.py
         env:
           FLOW_URL: ${{ secrets.FLOW_URL }}
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}   # Hugging Face Access Token
-        run: python "food crawl.py"
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: python food_crawl.py
