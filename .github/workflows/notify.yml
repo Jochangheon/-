@@ -21,8 +21,13 @@ jobs:
         run: |
           pip install requests pillow selenium webdriver-manager huggingface_hub
 
+      - name: Install system packages (Chrome)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
+
       - name: Run food crawl.py
         env:
           FLOW_URL: ${{ secrets.FLOW_URL }}
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}   # Hugging Face 토큰 (무료 계정 생성 후 Settings에서 발급)
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}   # Hugging Face Access Token
         run: python "food crawl.py"
