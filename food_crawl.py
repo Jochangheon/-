@@ -37,7 +37,7 @@ def main():
         print("🌐 네이버 플레이스 페이지 접속...")
         driver.get(naver_url)
 
-        wait = WebDriverWait(driver, 15)
+        wait = WebDriverWait(driver, 30)  # 타임아웃을 명시적으로 설정합니다 (기존 15에서 30으로 변경)
         print("🔄 entryIframe 전환...")
         wait.until(EC.frame_to_be_available_and_switch_to_it((By.ID, "entryIframe")))
         print("✅ entryIframe 전환 성공")
@@ -65,23 +65,25 @@ def main():
                       f"이 메뉴판의 음식 이름만 JSON 배열로 정리해줘. 예시: [\"김치찌개\", \"된장찌개\", \"비빔밥\"]"
         }
 
-        for attempt in range(5):  # 최대 5회 시도
+        max_attempts = 3  # 최대 시도를 줄이거나 늘림으로써 무한 대기를 방지합니다
+
+        for attempt in range(max_attempts):
             try:
-                print("🤖 Hugging Face API 호출 중... (시도 {}/{})".format(attempt + 1, 5))
-                resp = requests.post(api_url, headers=headers, json=payload, timeout=120)  # 타임아웃 늘림
+                print("🤖 Hugging Face API 호출 중... (시도 {}/{})".format(attempt + 1, max_attempts))
+                resp = requests.post(api_url, headers=headers, json=payload, timeout=30)
                 print("🔎 HF 응답 상태:", resp.status_code)
 
-                resp.raise_for_status()  # HTTP 오류 발생 시 예외 발생
+                resp.raise_for_status()
                 
-                result = resp.json()  # 응답 해석
+                result = resp.json()
                 print("HF 응답 원본:", json.dumps(result, ensure_ascii=False, indent=2))
-                break  # 성공적이면 루프를 빠져나옴
+                break
             except requests.exceptions.HTTPError as e:
                 print("❌ 요청 실패: HTTP Error", e)
                 print("응답 내용:", resp.text)
             except requests.exceptions.ReadTimeout:
                 print("⏳ 타임아웃 발생, 재시도 대기 중...")
-                time.sleep(2 ** attempt)  # 2의 제곱시간만큼 대기 (1, 2, 4, 8, 16초)
+                time.sleep(2 ** attempt)
             except requests.exceptions.RequestException as e:
                 print(f"❌ 요청 실패: {e}")
                 print("응답 내용:", e.response.text if e.response else 'No response')
