@@ -9,7 +9,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from PIL import Image
-import easyocr
+from paddleocr import PaddleOCR
 
 
 def main():
@@ -24,7 +24,7 @@ def main():
 
     # Chrome WebDriver 옵션
     options = webdriver.ChromeOptions()
-    options.binary_location = "/usr/bin/google-chrome"   # GitHub Actions 환경 크롬 경로
+    options.binary_location = "/usr/bin/google-chrome"
     options.add_argument("--headless=new")
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920x1080")
@@ -63,12 +63,17 @@ def main():
         img_path = "/tmp/menu.jpg"
         img.save(img_path)
 
-        # EasyOCR로 분석
-        print("🔍 EasyOCR 분석 시작...")
-        reader = easyocr.Reader(['ko'], gpu=False)  # 한국어 전용, GPU는 Actions에서 없음
-        result = reader.readtext(img_path, detail=0)
+        # PaddleOCR로 분석
+        print("🔍 PaddleOCR 분석 시작...")
+        ocr = PaddleOCR(use_angle_cls=True, lang="korean")  # 한국어 전용
+        result = ocr.ocr(img_path, cls=True)
 
-        menu_lines = [line.strip() for line in result if line.strip()]
+        menu_lines = []
+        for line in result[0]:
+            text = line[1][0].strip()
+            if text:
+                menu_lines.append(text)
+
         if not menu_lines:
             message = "오늘은 메뉴 이미지를 분석할 수 없습니다. 직접 확인해 주세요."
             print("❌ OCR 결과 없음")
@@ -81,11 +86,11 @@ def main():
                 print(f"{idx}. {line}")
             print("=========================\n")
 
-        # Payload 구성 (Flow 스키마에 맞게 image_url 포함)
+        # Payload 구성
         payload = {
             "title": "🍽️ 오늘의 메뉴",
             "message": message,
-            "image_url": image_url
+            "image_url": image_url  # Flow AdaptiveCard에서 이미지 표시 가능
         }
 
         # Payload 디버깅 출력
