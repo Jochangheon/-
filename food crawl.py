@@ -75,12 +75,25 @@ def main():
 
         with open(img_path, "rb") as f:
             prompt = "이 이미지 속에서 음식 메뉴 이름만 뽑아서 JSON 배열로 출력해줘. 예시: [\"김치찌개\",\"된장찌개\",\"비빔밥\"]"
-            response = client.text_to_text(prompt=prompt, images=[f])
+            response = client.post(
+                json={
+                    "inputs": {
+                        "prompt": prompt,
+                        "image": f.read()
+                    }
+                }
+            )
+
+        # 응답 처리
+        if isinstance(response, dict):
+            text = response.get("generated_text", "")
+        else:
+            text = str(response)
 
         try:
-            menus = json.loads(response.strip())
-        except:
-            menus = [line.strip() for line in response.split("\n") if line.strip()]
+            menus = json.loads(text.strip())
+        except Exception:
+            menus = [line.strip() for line in text.split("\n") if line.strip()]
 
         print("\n===== AI 추출 결과 =====")
         for idx, menu in enumerate(menus, 1):
