@@ -65,21 +65,26 @@ def main():
                       f"이 메뉴판의 음식 이름만 JSON 배열로 정리해줘. 예시: [\"김치찌개\", \"된장찌개\", \"비빔밥\"]"
         }
 
-        # Repeatedly retry the API call with an exponential backoff strategy
         for attempt in range(5):  # 최대 5회 시도
             try:
                 print("🤖 Hugging Face API 호출 중... (시도 {}/{})".format(attempt + 1, 5))
                 resp = requests.post(api_url, headers=headers, json=payload, timeout=120)  # 타임아웃 늘림
                 print("🔎 HF 응답 상태:", resp.status_code)
 
+                resp.raise_for_status()  # HTTP 오류 발생 시 예외 발생
+                
                 result = resp.json()  # 응답 해석
                 print("HF 응답 원본:", json.dumps(result, ensure_ascii=False, indent=2))
                 break  # 성공적이면 루프를 빠져나옴
+            except requests.exceptions.HTTPError as e:
+                print("❌ 요청 실패: HTTP Error", e)
+                print("응답 내용:", resp.text)
             except requests.exceptions.ReadTimeout:
                 print("⏳ 타임아웃 발생, 재시도 대기 중...")
                 time.sleep(2 ** attempt)  # 2의 제곱시간만큼 대기 (1, 2, 4, 8, 16초)
             except requests.exceptions.RequestException as e:
                 print(f"❌ 요청 실패: {e}")
+                print("응답 내용:", e.response.text if e.response else 'No response')
                 break
         
     except Exception as e:
