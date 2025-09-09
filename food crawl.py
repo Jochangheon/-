@@ -13,7 +13,6 @@ import traceback
 
 
 def main():
-    # 환경변수 확인
     flow_url = os.environ.get("FLOW_URL")
     hf_token = os.environ.get("HF_TOKEN")
 
@@ -24,10 +23,8 @@ def main():
         print("❌ HF_TOKEN 환경변수가 없습니다.")
         return
 
-    # 네이버 플레이스 URL
     naver_url = "https://map.naver.com/p/search/%EB%B0%A5%EC%A7%93%EB%8A%94%20%EB%B6%80%EC%97%8C/place/1578060862"
 
-    # 크롬 옵션
     options = webdriver.ChromeOptions()
     options.binary_location = "/usr/bin/google-chrome"
     options.add_argument("--headless=new")
@@ -39,7 +36,6 @@ def main():
 
     driver = None
     try:
-        # === 크롤링 ===
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
         print("🌐 네이버 플레이스 페이지 접속...")
         driver.get(naver_url)
@@ -59,28 +55,32 @@ def main():
             return
         print(f"✅ 이미지 URL: {image_url}")
 
-        # 이미지 다운로드 (단순 검증용)
+        # 이미지 다운로드 (검증용)
         response = requests.get(image_url, timeout=10)
         img = Image.open(BytesIO(response.content))
         img_path = "/tmp/menu.jpg"
         img.save(img_path)
 
-        # === Hugging Face REST API 호출 (bloomz-560m) ===
+        # Hugging Face REST API 호출 (지원 모델 사용)
         print("🤖 Hugging Face API 호출 중...")
-        model = "bigscience/bloomz-560m"  # ✅ 테스트용 안정 모델
+        model = "google/flan-t5-small"   # ✅ API 지원 모델
         api_url = f"https://api-inference.huggingface.co/models/{model}"
         headers = {"Authorization": f"Bearer {hf_token}"}
 
-        payload = {"inputs": f"이미지 URL: {image_url}\n오늘의 메뉴 3가지를 추천해줘."}
+        payload = {
+            "inputs": f"다음은 음식점 메뉴 이미지 URL입니다: {image_url}\n"
+                      f"이 메뉴판의 음식 이름만 JSON 배열로 정리해줘. 예시: [\"김치찌개\",\"된장찌개\",\"비빔밥\"]"
+        }
 
         resp = requests.post(api_url, headers=headers, json=payload, timeout=60)
         print("🔎 HF 응답 상태:", resp.status_code)
 
         try:
             result = resp.json()
-            print("✅ HF 응답 JSON:", json.dumps(result, ensure_ascii=False, indent=2))
+            print("HF 응답 원본:", json.dumps(result, ensure_ascii=False, indent=2))
         except Exception:
-            print("❌ HF 응답 원문:", resp.text)
+            print("❌ HF 응답 텍스트:", resp.text)
+            return
 
     except Exception as e:
         print("❌ 오류 발생:", repr(e))
