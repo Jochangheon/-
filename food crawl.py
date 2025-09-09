@@ -9,20 +9,26 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from PIL import Image
-from paddleocr import PaddleOCR
+from huggingface_hub import InferenceClient
 
 
 def main():
-    # FLOW_URL 은 GitHub Secrets에서 받아옴
+    # Flow URL
     flow_url = os.environ.get("FLOW_URL")
     if not flow_url:
-        print("❌ FLOW_URL 환경변수가 없습니다. GitHub Secrets 설정을 확인하세요.")
+        print("❌ FLOW_URL 환경변수가 없습니다.")
+        return
+
+    # Hugging Face 토큰
+    hf_token = os.environ.get("HF_TOKEN")
+    if not hf_token:
+        print("❌ HF_TOKEN 환경변수가 없습니다. Hugging Face Access Token을 설정하세요.")
         return
 
     # 네이버 플레이스 URL
     naver_url = "https://map.naver.com/p/search/%EB%B0%A5%EC%A7%93%EB%8A%94%20%EB%B6%80%EC%97%8C/place/1578060862"
 
-    # Chrome WebDriver 옵션
+    # 크롬 옵션
     options = webdriver.ChromeOptions()
     options.binary_location = "/usr/bin/google-chrome"
     options.add_argument("--headless=new")
@@ -45,7 +51,7 @@ def main():
         wait.until(EC.frame_to_be_available_and_switch_to_it((By.ID, "entryIframe")))
         print("✅ entryIframe 전환 성공")
 
-        # 메뉴 이미지 탐색 (소식의 첫 번째 이미지)
+        # 메뉴 이미지 탐색
         print("🔍 메뉴 이미지 탐색...")
         img_element = wait.until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "div.place_section img"))
@@ -63,37 +69,31 @@ def main():
         img_path = "/tmp/menu.jpg"
         img.save(img_path)
 
-        # PaddleOCR로 분석
-        print("🔍 PaddleOCR 분석 시작...")
-        ocr = PaddleOCR(use_angle_cls=True, lang="korean")  # 한국어 전용
-        result = ocr.ocr(img_path, cls=True)
+        # Hugging Face 멀티모달 모델 호출 (예: Qwen-VL)
+        print("🤖 Hugging Face AI 호출 중...")
+        client = InferenceClient(model="Qwen/Qwen-VL", token=hf_token)
 
-        menu_lines = []
-        for line in result[0]:
-            text = line[1][0].strip()
-            if text:
-                menu_lines.append(text)
+        with open(img_path, "rb") as f:
+            prompt = "이 이미지 속에서 음식 메뉴 이름만 뽑아서 JSON 배열로 출력해줘. 예시: [\"김치찌개\",\"된장찌개\",\"비빔밥\"]"
+            response = client.text_to_text(prompt=prompt, images=[f])
 
-        if not menu_lines:
-            message = "오늘은 메뉴 이미지를 분석할 수 없습니다. 직접 확인해 주세요."
-            print("❌ OCR 결과 없음")
-        else:
-            menu_message = "\n".join(menu_lines)
-            message = f"오늘의 메뉴는 다음과 같습니다:\n{menu_message}"
+        try:
+            menus = json.loads(response.strip())
+        except:
+            menus = [line.strip() for line in response.split("\n") if line.strip()]
 
-            print("\n===== OCR 추출 결과 =====")
-            for idx, line in enumerate(menu_lines, 1):
-                print(f"{idx}. {line}")
-            print("=========================\n")
+        print("\n===== AI 추출 결과 =====")
+        for idx, menu in enumerate(menus, 1):
+            print(f"{idx}. {menu}")
+        print("=========================\n")
 
-        # Payload 구성
+        # Flow 전송 Payload
         payload = {
-            "title": "🍽️ 오늘의 메뉴",
-            "message": message,
-            "image_url": image_url  # Flow AdaptiveCard에서 이미지 표시 가능
+            "title": "🍽️ 오늘의 메뉴 (AI 인식)",
+            "message": "\n".join(menus),
+            "image_url": image_url
         }
 
-        # Payload 디버깅 출력
         print("===== 전송할 Payload =====")
         print(json.dumps(payload, indent=2, ensure_ascii=False))
         print("=========================\n")
