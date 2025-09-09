@@ -19,7 +19,7 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install requests pillow selenium webdriver-manager easyocr
+          pip install requests pillow selenium webdriver-manager paddleocr paddlepaddle
 
       - name: Install system packages (Chrome)
         run: |
@@ -28,5 +28,5 @@ jobs:
 
       - name: Run food crawl.py
         env:
-          FLOW_URL: ${{ secrets.FLOW_URL }}   # ✅ GitHub Secrets에 Flow API Endpoint 저장
+          FLOW_URL: ${{ secrets.FLOW_URL }}
         run: python "food crawl.py"
