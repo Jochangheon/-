@@ -14,10 +14,9 @@ import time
 def analyze_image_with_multimodal_models(image_url, hf_token):
     """멀티모달 모델을 사용한 이미지 분석"""
     
-    # 실질적으로 Inference API에서 지원되는 이미지 캡셔닝 모 도시
+    # 확인된 멀티모달 모델
     multimodal_models = [
-        "google/vit-gpt2-image-captioning",  # 가능한 경우 사용하는 멀티모달 모델
-        # 추가적으로 다른 모델들을 검토하고 사용합니다
+        "Salesforce/blip-image-captioning-base"  # 이미지 캡셔닝 기능 지원 가능 모델
     ]
     
     for model in multimodal_models:
@@ -37,7 +36,7 @@ def analyze_image_with_multimodal_models(image_url, hf_token):
                         api_url, 
                         headers=headers, 
                         data=img_response.content,  # 이미지 바이너리 데이터 직접 전송
-                        timeout=60  # 타임아웃 확대
+                        timeout=120  # 타임아웃을 120초로 확장
                     )
                     print(f"   응답 상태: {resp.status_code}")
                     
@@ -48,7 +47,7 @@ def analyze_image_with_multimodal_models(image_url, hf_token):
                         return result
                         
                     elif resp.status_code == 503:
-                        print("   ⏳ 모델 로딩 중, 재시도...")
+                        print("   ⏳ 모델 로딩 중, 잠시 후 재시도...")
                         time.sleep(10)
                     else:
                         print(f"   ⚠️ 상태 코드: {resp.status_code}, 응답: {resp.text}")
