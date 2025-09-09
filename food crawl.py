@@ -8,9 +8,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
-from PIL import Image, ImageEnhance, ImageFilter
-import pytesseract
-import re
+from PIL import Image
+import easyocr
 
 
 def main():
@@ -61,21 +60,15 @@ def main():
         # 이미지 다운로드
         response = requests.get(image_url, timeout=10)
         img = Image.open(BytesIO(response.content))
+        img_path = "/tmp/menu.jpg"
+        img.save(img_path)
 
-        # OCR 전처리 (흑백 변환 + 대비 강화 + 이진화)
-        img = img.convert("L")  # 흑백
-        img = ImageEnhance.Contrast(img).enhance(3.0)  # 대비 강화
-        img = img.point(lambda x: 0 if x < 160 else 255, '1')  # 이진화
+        # EasyOCR로 분석
+        print("🔍 EasyOCR 분석 시작...")
+        reader = easyocr.Reader(['ko'], gpu=False)  # 한국어 전용, GPU는 Actions에서 없음
+        result = reader.readtext(img_path, detail=0)
 
-        print("🔍 OCR 분석 시작...")
-        # 한글 전용 OCR
-        menu_text = pytesseract.image_to_string(img, lang="kor")
-
-        # 줄 단위 정리 + 한글/숫자/특정 기호만 남김
-        menu_lines = [line.strip() for line in menu_text.split("\n") if line.strip()]
-        menu_lines = [re.sub(r"[^가-힣0-9\s\.\,\(\)]", "", line) for line in menu_lines if line.strip()]
-        menu_lines = [line for line in menu_lines if line]  # 공백 줄 제거
-
+        menu_lines = [line.strip() for line in result if line.strip()]
         if not menu_lines:
             message = "오늘은 메뉴 이미지를 분석할 수 없습니다. 직접 확인해 주세요."
             print("❌ OCR 결과 없음")
@@ -88,10 +81,11 @@ def main():
                 print(f"{idx}. {line}")
             print("=========================\n")
 
-        # Payload 구성 (OCR 메뉴만 전송)
+        # Payload 구성 (Flow 스키마에 맞게 image_url 포함)
         payload = {
             "title": "🍽️ 오늘의 메뉴",
-            "message": message
+            "message": message,
+            "image_url": image_url
         }
 
         # Payload 디버깅 출력
